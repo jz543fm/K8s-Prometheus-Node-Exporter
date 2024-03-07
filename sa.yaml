@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: prometheus-node-exporter-example
+  name: prometheus-node-exporter-example
+  namespace: node-exporter

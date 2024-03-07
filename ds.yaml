@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations:
+    deprecated.daemonset.template.generation: "1"
+    meta.helm.sh/release-name: kube-prometheus-stack
+    meta.helm.sh/release-namespace: node-exporter
+  generation: 1
+  labels:
+    app: prometheus-node-exporter-example
+    app.kubernetes.io/managed-by: Helm
+    chart: prometheus-node-exporter-3.0.0
+    heritage: Helm
+    jobLabel: node-exporter
+    release: kube-prometheus-stack
+  name: prometheus-node-exporter-example
+  namespace: node-exporter
+spec:
+  revisionHistoryLimit: 20
+  selector:
+    matchLabels:
+      app: prometheus-node-exporter-example
+      release: kube-prometheus-stack
+  template:
+    metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+      creationTimestamp: null
+      labels:
+        app: prometheus-node-exporter-example
+        chart: prometheus-node-exporter-3.0.0
+        heritage: Helm
+        jobLabel: node-exporter
+        release: kube-prometheus-stack
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - args:
+        - --collector.disable-defaults
+        - --web.listen-address=$(HOST_IP):9600
+        #- --path.sysfs=/host/sys
+        #- --log.level=debug
+        env:
+        - name: HOST_IP
+          value: 0.0.0.0
+        #image: https://hub.docker.com/r/prom/node-exporter/tags
+        image: prom/node-exporter:v1.7.0
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 9600
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: node-exporter
+        ports:
+        - containerPort: 9600
+          name: http-metrics
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 9600
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /host/proc
+          name: proc
+          readOnly: true
+        - mountPath: /host/sys
+          name: sys
+          readOnly: true
+        - mountPath: /host/root
+          mountPropagation: HostToContainer
+          name: root
+          readOnly: true
+      dnsPolicy: ClusterFirst
+      hostNetwork: true
+      hostPID: true
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 65534
+        runAsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
+      serviceAccount: prometheus-node-exporter-example
+      serviceAccountName: prometheus-node-exporter-example
+      terminationGracePeriodSeconds: 30
+      tolerations:
+      - effect: NoSchedule
+        operator: Exists
+      volumes:
+      - hostPath:
+          path: /proc
+          type: ""
+        name: proc
+      - hostPath:
+          path: /sys
+          type: ""
+        name: sys
+      - hostPath:
+          path: /
+          type: ""
+        name: root
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
